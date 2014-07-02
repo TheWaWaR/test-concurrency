@@ -31,16 +31,19 @@ application = tornado.web.Application([
 
 if __name__ == '__main__':
 
+    define("host", default="0.0.0.0", help="Bind host")
+    define("port", default=8001, type=int, help="Bind port")
+    define("backlog", default=128, type=int, help="Backlog")
+    define("processes", default=4, type=int, help="Number of processes")
     
-    define("addr", default="0.0.0.0:8001", help="Bind address")
     options.parse_command_line()
-    print 'Listening on => ', options.addr
-    host, port = options.addr.split(':')
-    port = int(port)
+    print 'Listening on => ', '%s:%d * %d * %d' % (options.host, options.port,
+                                                   options.processes, options.backlog)
     
     http_server = tornado.httpserver.HTTPServer(application, ssl_options={
         "certfile": "cert.pem",
         "keyfile": "key.pem",
     })
-    http_server.listen(port, host)
+    http_server.bind(options.port, options.host, backlog=options.backlog)
+    http_server.start(options.processes)
     IOLoop.instance().start()

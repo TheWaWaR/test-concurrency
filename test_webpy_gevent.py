@@ -13,7 +13,7 @@ from web.wsgiserver import CherryPyWSGIServer
 '''
     Test command:
     =============
-       gunicorn --certfile=cert.pem --keyfile=key.pem -k gevent -w 200 -b 0.0.0.0:8080 webapp:wsgiapp 2>/dev/null 1>/dev/null
+      gunicorn --certfile=cert.pem --keyfile=key.pem -k gevent -w 32 -b 0.0.0.0:8002 test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null
 '''
 
 
