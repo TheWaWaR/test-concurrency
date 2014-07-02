@@ -43,7 +43,7 @@ SUMMARY = {
 
 CONCURRENTS = [200, 400, 600, 800, 1000]
 PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
-SECONDS = 20
+SECONDS = 15
 
 REGEXPS = {
     'availability' : r'^Availability.*\b(\d+\.\d+)\b.*',
