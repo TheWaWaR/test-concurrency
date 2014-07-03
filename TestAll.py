@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #coding: utf-8
 
+import os
 import re
 import json
 import time
@@ -154,7 +155,7 @@ def main():
             results.append(result)
         print '======================================================\n\n'
             
-    with open('{0}_summary.json'.format(time_now()), 'w') as f:
+    with open(os.path.join('results', '{0}_summary.json'.format(time_now())), 'w') as f:
         f.write(json.dumps(SUMMARY, indent=4))
 
 
