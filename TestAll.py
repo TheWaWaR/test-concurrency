@@ -17,30 +17,30 @@ ETH0_IP = '192.168.3.235'
 
 SUMMARY = {
     'test_http.go': {
-        'cmd_tmpl': './test_http.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
+        'cmd_tmpl': './webapps/test_http.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
         'port' : 9001,
         'results': []
     },
     'test_martini.go': {
-        'cmd_tmpl': './test_martini.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
+        'cmd_tmpl': './webapps/test_martini.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
         'port': 9002,
         'results': []
     },
     'test_tornado.py': {
         'port': 8001,
-        'cmd_tmpl': 'python test_tornado.py --port=%(port)d --processes=%(processes)d  2>/dev/null 1>/dev/null',
+        'cmd_tmpl': './webapps/test_tornado.py --port=%(port)d --processes=%(processes)d  2>/dev/null 1>/dev/null',
         'results': []
     },
     'test_webpy_gevent.py': {
         'port': 8002,
         # 'cmd_tmpl': 'gunicorn --certfile=cert.pem --keyfile=key.pem -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
-        'cmd_tmpl': 'gunicorn -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
+        'cmd_tmpl': 'cd webapps && gunicorn -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
         'results': []
     },
     'test_webpy_gevent.py-UWSGI' : {
         'port': 8003,
         # 'cmd_tmpl': 'uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --https 0.0.0.0:%(port)d,cert.pem,key.pem --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
-        'cmd_tmpl': 'uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --http 0.0.0.0:%(port)d --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
+        'cmd_tmpl': 'cd webapps && uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --http 0.0.0.0:%(port)d --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
         'results': []
     }
 }
@@ -50,8 +50,8 @@ PROCESSES_LST = [1]#, 4, 8, 16, 32, 100, 200]
 SECONDS = 5
 
 REGEXPS = {
-    'availability' : r'^Availability.*\b(\d+\.\d+)\b.*',
-    'rate': r'^Transaction rate.*\b(\d+\.\d+)\b.*'
+    'availability(%)' : r'^Availability.*\b(\d+\.\d+)\b.*',
+    'transaction-rate(trans/sec)': r'^Transaction rate.*\b(\d+\.\d+)\b.*'
 }
 
 
