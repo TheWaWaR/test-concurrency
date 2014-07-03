@@ -136,6 +136,16 @@ def do_test(test_url, concurrent, seconds=20):
 
 
 def main():
+    def cmp_res(a, b):
+        c1, c2 = a['concurrent'], b['concurrent']
+        if c1 > c2: return 1
+        if c1 < c2: return -1
+        
+        p1, p2 = a['processes'], b['processes']
+        if p1 > p2: return 1
+        if p1 <= p2: return -1
+
+
     for k, info in SUMMARY.iteritems():
         cmd_tmpl = info['cmd_tmpl']
         port = info['port']
@@ -163,6 +173,8 @@ def main():
             print time_now()
             print '----------------------------------------\n'
             results.append(result)
+            
+        results.sort(cmp=cmp_res)
         print '======================================================\n\n'
             
     with open(os.path.join('results', '{0}_summary.json'.format(time_now())), 'w') as f:
