@@ -132,7 +132,7 @@ def main():
         cmd_tmpl = info['cmd_tmpl']
         port = info['port']
         ip = ETH0_IP
-        test_url = 'https://%(ip)s:%(port)d/hello' % locals()
+        test_url = 'http://%(ip)s:%(port)d/hello' % locals()
         results = info['results']
         print 'Section:', k, test_url
         print time_now()
