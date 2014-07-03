@@ -5,17 +5,41 @@ import os
 import re
 import json
 import time
+import traceback
 import subprocess
+import threading
+from multiprocessing import Process, Queue
 from datetime import datetime
 
 import psutil
 import requests
 
 
-TEST_REQ_URL = 'http://192.168.40.215:8999/test'
-ETH0_IP = '192.168.3.235'
+TEST_SERVER_HOSTS = ['192.168.40.215', '192.168.40.91']
+TEST_REQ_TMPL = 'http://%(host)s:8999/test'
+APPSERVER_IP = '192.168.3.235'
+
+SECONDS = 20
+CONCURRENTS = [200, 400, 600, 800, 1000]
+PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
+
+HEADERS = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+REGEXPS = {
+    'availability(%)' : r'^Availability.*\b(\d+\.\d+)\b.*',
+    'transaction-rate(trans/sec)': r'^Transaction rate.*\b(\d+\.\d+)\b.*'
+}
+
 
 SUMMARY = {
+    'INFO': {
+        'TAG' : 'None',
+        'SECONDS': SECONDS,
+        'CONCURRENTS': CONCURRENTS,
+        'PROCESSES_LST': PROCESSES_LST,
+        'TEST_SERVER_HOSTS': TEST_SERVER_HOSTS,
+        'APPSERVER_IP' : APPSERVER_IP
+    }
     'test_http.go': {
         'cmd_tmpl': './webapps/test_http.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
         'port' : 9001,
@@ -45,17 +69,11 @@ SUMMARY = {
     # }
 }
 
-CONCURRENTS = [200, 400, 600, 800, 1000]
-PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
-SECONDS = 15
 
-REGEXPS = {
-    'availability(%)' : r'^Availability.*\b(\d+\.\d+)\b.*',
-    'transaction-rate(trans/sec)': r'^Transaction rate.*\b(\d+\.\d+)\b.*'
-}
+time_now = lambda: datetime.now().strftime("%m-%d_%H:%M:%S")
+results_lock = threading.Lock()
 
-
-def kill_proc_tree(pid, including_parent=True):    
+def kill_proc_tree(pid, including_parent=True):
     parent = psutil.Process(pid)
     for child in parent.children(recursive=True):
         try:
@@ -67,10 +85,6 @@ def kill_proc_tree(pid, including_parent=True):
             parent.kill()
         except psutil.NoSuchProcess:
             pass
-
-        
-def time_now():
-    return datetime.now().strftime("%m-%d_%H-%M-%S")
 
 
 def ping(url):
@@ -85,9 +99,84 @@ def ping(url):
     if req and req.status_code == 200:
         status = True
     return status
-    
 
-def gen_server_results(cmd_tmpl, port, test_url):
+
+def extract_test(data):
+    output = data['output']
+    result = {
+        'output': output
+    }
+    for line in output.split('\n'):
+        for name, regexp in REGEXPS.iteritems():
+            m = re.match(regexp, line)
+            if m:
+                match_result = m.groups()[0]
+                result[name] = float(match_result)
+                break
+    return result
+
+
+def test_request(results, url, data, timeout):
+    retry = 3
+    resp_data = None
+    while retry > 0:
+        try:
+            req = requests.post(url, headers=HEADERS, data=json.dumps(data), timeout=timeout)
+            resp_data = req.json()
+            retry = 0           # !!!
+        except requests.Timeout as e:
+            print (3-retry), e
+            retry -= 1
+
+    if resp_data:
+        result = extract_test(resp_data)
+        results_lock.acquire()
+        results.append(result)
+        results_lock.release()
+
+
+def merge_test(datas):
+    if len(datas) == 0: return None
+    
+    result = {}
+    outputs = []
+    keys = []
+    for key in REGEXPS.keys():
+        keys.append(key)
+        # result[key] = []
+        result[key + '_TOTAL'] = 0
+        
+    for data in datas:
+        outputs.append(data['output'])
+        for key in keys:
+            # result[key].append(data[key])
+            result[key + '_TOTAL'] = result[key + '_TOTAL'] + data[key]
+
+    result['output'] = '\n\n'.join(outputs)
+    return result
+
+
+def do_test(app_url, concurrent, seconds=20):
+    data = {
+        'url': app_url,
+        'concurrent': concurrent,
+        'seconds': seconds,
+    }
+    timeout = seconds + 10
+
+    results = []
+    threads = []
+    for host in TEST_SERVER_HOSTS:
+        test_req_url = TEST_REQ_TMPL % locals()
+        t = threading.Thread(target=test_request, args=(results, test_req_url, data, timeout))
+        t.start()
+        threads.append(t)
+
+    [t.join() for t in threads]
+    return merge_test(results)
+
+    
+def gen_server_results(cmd_tmpl, port, app_url):
     for processes in PROCESSES_LST:
         cmd = cmd_tmpl % locals()
         print 'Server:', cmd
@@ -95,7 +184,7 @@ def gen_server_results(cmd_tmpl, port, test_url):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         time.sleep(0.5)
-        if not ping(test_url):
+        if not ping(app_url):
             yield {
                 'processes': processes,
                 'concurrent': -1,
@@ -105,34 +194,13 @@ def gen_server_results(cmd_tmpl, port, test_url):
             continue
             
         for concurrent in CONCURRENTS:
-            data = do_test(test_url, concurrent, seconds=SECONDS)
-            result = {
-                'processes': processes,
-                'concurrent': concurrent,
-                'output': data['output']
-            }
+            result = do_test(app_url, concurrent, seconds=SECONDS)
+            result['processes'] = processes
+            result['concurrent'] = concurrent * len(TEST_SERVER_HOSTS)
             yield result
 
         kill_proc_tree(p.pid)
         time.sleep(3)
-
-
-HEADERS = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-def do_test(test_url, concurrent, seconds=20):
-    data = {
-        'url': test_url,
-        'concurrent': concurrent,
-        'seconds': seconds,
-    }
-    timeout = seconds + 10
-    retry = 3
-    while retry > 0:
-        try:
-            req = requests.post(TEST_REQ_URL, headers=HEADERS, data=json.dumps(data), timeout=timeout)
-            return req.json()
-        except requests.Timeout as e:
-            print (3-retry), e
-            retry -= 1
 
 
 def main():
@@ -149,28 +217,20 @@ def main():
     for k, info in SUMMARY.iteritems():
         cmd_tmpl = info['cmd_tmpl']
         port = info['port']
-        ip = ETH0_IP
-        test_url = 'http://%(ip)s:%(port)d/hello' % locals()
+        ip = APPSERVER_IP
+        app_url = 'http://%(ip)s:%(port)d/hello' % locals()
         results = info['results']
-        print 'Section:', k, test_url
+        print 'Section:', k, app_url
         print time_now()
         print '=================='
         
-        for result in gen_server_results(cmd_tmpl, port, test_url):
+        for result in gen_server_results(cmd_tmpl, port, app_url):
             print 'section: {0}, processes: {1}, concurrent: {2}'.format(k, result['processes'], result['concurrent'])
             output = result.pop('output')
-            for line in output.split('\n'):
-                for name, regexp in REGEXPS.iteritems():
-                    m = re.match(regexp, line)
-                    if m:
-                        match_result = m.groups()[0]
-                        result[name] = float(match_result)
-                        break
-
             print '--------------------'
             print output
             print '--------------------'
-            print time_now()
+            print time_now(), k
             print '----------------------------------------\n'
             results.append(result)
             

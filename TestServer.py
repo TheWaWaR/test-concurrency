@@ -22,7 +22,7 @@ class Tester(object):
                 'status': 'KeyError',
                 'output': str(e)
             })
-        CMD = 'siege -c %(concurrent)d -t %(seconds)ds %(url)s' % locals()
+        CMD = 'ulimit -n 10000 && siege -c %(concurrent)d -t %(seconds)ds %(url)s' % locals()
         print 'Test cmd:', CMD
         status, output = commands.getstatusoutput(CMD)
 
