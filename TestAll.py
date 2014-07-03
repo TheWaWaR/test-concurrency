@@ -5,10 +5,8 @@ import os
 import re
 import json
 import time
-import traceback
 import subprocess
 import threading
-from multiprocessing import Process, Queue
 from datetime import datetime
 
 import psutil
@@ -19,9 +17,9 @@ TEST_SERVER_HOSTS = ['192.168.40.215', '192.168.40.91']
 TEST_REQ_TMPL = 'http://%(host)s:8999/test'
 APPSERVER_IP = '192.168.3.235'
 
-SECONDS = 20
-CONCURRENTS = [200, 400, 600, 800, 1000]
-PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
+SECONDS = 10
+CONCURRENTS = [400, 600, 800, 1000, 1600]
+PROCESSES_LST = [1, 4, 8, 16, 32]
 
 HEADERS = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
@@ -39,34 +37,33 @@ SUMMARY = {
         'PROCESSES_LST': PROCESSES_LST,
         'TEST_SERVER_HOSTS': TEST_SERVER_HOSTS,
         'APPSERVER_IP' : APPSERVER_IP
-    }
-    'test_http.go': {
-        'cmd_tmpl': './webapps/test_http.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
-        'port' : 9001,
-        'results': []
     },
-    'test_martini.go': {
-        'cmd_tmpl': './webapps/test_martini.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
-        'port': 9002,
-        'results': []
-    },
-    'test_tornado.py': {
-        'port': 8001,
-        'cmd_tmpl': './webapps/test_tornado.py --port=%(port)d --processes=%(processes)d  2>/dev/null 1>/dev/null',
-        'results': []
-    },
-    'test_webpy_gevent.py': {
-        'port': 8002,
-        # 'cmd_tmpl': 'gunicorn --certfile=cert.pem --keyfile=key.pem -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
-        'cmd_tmpl': 'cd webapps && gunicorn -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
-        'results': []
-    },
-    # 'test_webpy_gevent.py-UWSGI' : {
-    #     'port': 8003,
-    #     # 'cmd_tmpl': 'uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --https 0.0.0.0:%(port)d,cert.pem,key.pem --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
-    #     'cmd_tmpl': 'cd webapps && uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --http 0.0.0.0:%(port)d --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
-    #     'results': []
-    # }
+    'tests': [
+        {
+            'app': 'test_http.go',
+            'cmd_tmpl': './webapps/test_http.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
+            'port' : 9001,
+            'results': []
+        },
+        {
+            'app': 'test_martini.go',
+            'cmd_tmpl': './webapps/test_martini.bin -port=%(port)d -size=%(processes)d 2>/dev/null 1>/dev/null',
+            'port': 9002,
+            'results': []
+        },
+        {
+            'app': 'test_tornado.py',
+            'port': 8001,
+            'cmd_tmpl': './webapps/test_tornado.py --port=%(port)d --processes=%(processes)d  2>/dev/null 1>/dev/null',
+            'results': []
+        },
+        {
+            'app': 'test_webpy_gevent.py',
+            'port': 8002,
+            'cmd_tmpl': 'cd webapps && gunicorn -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
+            'results': []
+        }
+    ]
 }
 
 
@@ -149,6 +146,7 @@ def merge_test(datas):
     for data in datas:
         outputs.append(data['output'])
         for key in keys:
+            if key not in data: continue
             # result[key].append(data[key])
             result[key + '_TOTAL'] = result[key + '_TOTAL'] + data[key]
 
@@ -214,23 +212,23 @@ def main():
         if p1 <= p2: return -1
 
 
-    for k, info in SUMMARY.iteritems():
+    for info in SUMMARY['tests']:
         cmd_tmpl = info['cmd_tmpl']
         port = info['port']
         ip = APPSERVER_IP
         app_url = 'http://%(ip)s:%(port)d/hello' % locals()
         results = info['results']
-        print 'Section:', k, app_url
+        print 'Section:', info['app'], app_url
         print time_now()
         print '=================='
         
         for result in gen_server_results(cmd_tmpl, port, app_url):
-            print 'section: {0}, processes: {1}, concurrent: {2}'.format(k, result['processes'], result['concurrent'])
+            print 'section: {0}, processes: {1}, concurrent: {2}'.format(info['app'], result['processes'], result['concurrent'])
             output = result.pop('output')
             print '--------------------'
             print output
             print '--------------------'
-            print time_now(), k
+            print time_now(), info['app']
             print '----------------------------------------\n'
             results.append(result)
             
