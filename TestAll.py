@@ -37,17 +37,17 @@ SUMMARY = {
         'cmd_tmpl': 'cd webapps && gunicorn -k gevent -w %(processes)d -b 0.0.0.0:%(port)d test_webpy_gevent:wsgiapp 2>/dev/null 1>/dev/null',
         'results': []
     },
-    'test_webpy_gevent.py-UWSGI' : {
-        'port': 8003,
-        # 'cmd_tmpl': 'uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --https 0.0.0.0:%(port)d,cert.pem,key.pem --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
-        'cmd_tmpl': 'cd webapps && uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --http 0.0.0.0:%(port)d --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
-        'results': []
-    }
+    # 'test_webpy_gevent.py-UWSGI' : {
+    #     'port': 8003,
+    #     # 'cmd_tmpl': 'uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --https 0.0.0.0:%(port)d,cert.pem,key.pem --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
+    #     'cmd_tmpl': 'cd webapps && uwsgi --gevent 100 --gevent-monkey-patch -M --processes %(processes)d --http 0.0.0.0:%(port)d --wsgi-file test_webpy_gevent.py --callable wsgiapp 2>/dev/null 1>/dev/null',
+    #     'results': []
+    # }
 }
 
-CONCURRENTS = [200]#, 400, 600, 800, 1000]
-PROCESSES_LST = [1]#, 4, 8, 16, 32, 100, 200]
-SECONDS = 5
+CONCURRENTS = [200, 400, 600, 800, 1000]
+PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
+SECONDS = 15
 
 REGEXPS = {
     'availability(%)' : r'^Availability.*\b(\d+\.\d+)\b.*',
@@ -58,9 +58,15 @@ REGEXPS = {
 def kill_proc_tree(pid, including_parent=True):    
     parent = psutil.Process(pid)
     for child in parent.children(recursive=True):
-        child.kill()
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            pass
     if including_parent:
-        parent.kill()
+        try:
+            parent.kill()
+        except psutil.NoSuchProcess:
+            pass
 
         
 def time_now():
@@ -74,6 +80,7 @@ def ping(url):
         req = requests.get(url, verify=False, timeout=2)
     except Exception as e:
         print 'Ping failed:', url, e
+        time.sleep(30)
 
     if req and req.status_code == 200:
         status = True
@@ -94,6 +101,7 @@ def gen_server_results(cmd_tmpl, port, test_url):
                 'concurrent': -1,
                 'output': 'PingError'
             }
+            kill_proc_tree(p.pid)
             continue
             
         for concurrent in CONCURRENTS:
@@ -104,9 +112,9 @@ def gen_server_results(cmd_tmpl, port, test_url):
                 'output': data['output']
             }
             yield result
-            
+
         kill_proc_tree(p.pid)
-        time.sleep(5)
+        time.sleep(3)
 
 
 HEADERS = {'Content-type': 'application/json', 'Accept': 'text/plain'}

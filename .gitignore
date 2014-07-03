@@ -3,3 +3,4 @@
 *.py[oc]
 *.bin
 *.log
+dep-files
