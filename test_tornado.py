@@ -40,10 +40,11 @@ if __name__ == '__main__':
     print 'Listening on => ', '%s:%d * %d * %d' % (options.host, options.port,
                                                    options.processes, options.backlog)
     
-    http_server = tornado.httpserver.HTTPServer(application, ssl_options={
-        "certfile": "cert.pem",
-        "keyfile": "key.pem",
-    })
+    # http_server = tornado.httpserver.HTTPServer(application, ssl_options={
+    #     "certfile": "cert.pem",
+    #     "keyfile": "key.pem",
+    # })
+    http_server = tornado.httpserver.HTTPServer(application)
     http_server.bind(options.port, options.host, backlog=options.backlog)
     http_server.start(options.processes)
     IOLoop.instance().start()

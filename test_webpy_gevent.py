@@ -18,8 +18,8 @@ from web.wsgiserver import CherryPyWSGIServer
 
 
 
-CherryPyWSGIServer.ssl_certificate = "cert.pem"
-CherryPyWSGIServer.ssl_private_key = "key.pem"
+# CherryPyWSGIServer.ssl_certificate = "cert.pem"
+# CherryPyWSGIServer.ssl_private_key = "key.pem"
 
 class Hello(object):
     def GET(self):

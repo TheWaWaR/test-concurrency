@@ -3,6 +3,8 @@ tornado
 gevent
 uwsgi
 gunicorn
+
+psutil
 pyOpenSSL
 
-# siege
+# siege libffi-dev python-dev

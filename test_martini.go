@@ -62,5 +62,6 @@ func init() {
 func main() {
 	addr := fmt.Sprintf(":%d", port)
 	log.Println("Listening on >> ", addr)
-	log.Fatal(http.ListenAndServeTLS(addr, "cert.pem", "key.pem", m))
+	// log.Fatal(http.ListenAndServeTLS(addr, "cert.pem", "key.pem", m))
+	log.Fatal(http.ListenAndServe(addr, m))
 }

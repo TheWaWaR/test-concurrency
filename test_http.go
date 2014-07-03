@@ -42,5 +42,6 @@ func main() {
 	h := Handler{regexp.MustCompile("^/([^/]+)$")}
 	addr := fmt.Sprintf(":%d", port)
 	log.Println("Listening on >> ", addr)
-	http.ListenAndServeTLS(addr, "cert.pem", "key.pem", &h)
+	// http.ListenAndServeTLS(addr, "cert.pem", "key.pem", &h)
+	http.ListenAndServe(addr, &h)
 }
