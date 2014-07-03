@@ -3,5 +3,6 @@ tornado
 gevent
 uwsgi
 gunicorn
+pyOpenSSL
 
 # siege

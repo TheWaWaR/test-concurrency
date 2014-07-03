@@ -7,6 +7,7 @@ import time
 import subprocess
 from datetime import datetime
 
+import psutil
 import requests
 
 
@@ -41,15 +42,24 @@ SUMMARY = {
     }
 }
 
-CONCURRENTS = [200, 400, 600, 800, 1000]
-PROCESSES_LST = [1, 4, 8, 16, 32, 100, 200]
-SECONDS = 15
+CONCURRENTS = [200]#, 400, 600, 800, 1000]
+PROCESSES_LST = [1]#, 4, 8, 16, 32, 100, 200]
+SECONDS = 5
 
 REGEXPS = {
     'availability' : r'^Availability.*\b(\d+\.\d+)\b.*',
     'rate': r'^Transaction rate.*\b(\d+\.\d+)\b.*'
 }
 
+
+def kill_proc_tree(pid, including_parent=True):    
+    parent = psutil.Process(pid)
+    for child in parent.children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+        
 def time_now():
     return datetime.now().strftime("%m-%d_%H-%M-%S")
 
@@ -91,8 +101,8 @@ def gen_server_results(cmd_tmpl, port, test_url):
                 'output': data['output']
             }
             yield result
-        p.terminate()
-        p.wait()
+            
+        kill_proc_tree(p.pid)
         time.sleep(5)
 
 
