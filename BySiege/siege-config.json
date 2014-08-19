@@ -1,0 +1,26 @@
+{
+    "summary_file": "./log/summary.json",
+    "test_interval": 1,
+    "test_time": "3s",
+    "concurrencies": [300, 600],
+    "methods": {
+        "GET": {
+            "headers": {
+                "X-Client-ID": "some-id",
+                "X-File-Name": "some.mp4",
+                "X-File-Size": "12354",
+                "X-URL": "thunder://QUFlZDJrOi8vfGZpbGV8JUU2JTlEJTgzJUU1JThBJTlCJUU3JTlBJTg0JUU2JUI4JUI4JUU2JTg4JThGLkdhbWUub2YuVGhyb25lcy5TMDRFMTAuRW5kLiVFNCVCOCVBRCVFOCU4QiVCMSVFNSVBRCU5NyVFNSVCOSU5NS5IRFRWcmlwLjYyNFgzNTIubXA0fDMxOTcxNzEwNXwxMjJhZmZiZTExYjFiNjkzOGQ1MWUwNzMxNjc3NTRhMnxoPWhjNmZibm9oZm9hdXgzc2trcXh5emp4dXNvaDVhdXR3fC9aWg=="
+            },
+            "urls_file": "url.list"
+        },
+        "POST": {
+            "headers": {
+                "Content-Type": "application/json",
+                "X-Client-ID": "client_id123456",
+                "X-Mime-Type": "video/mp4"
+            },
+            "url": "http://10.162.207.221:8080/copyrighted?key=this-is-TMP-apikey&hash=test&digest=0580bd7f4abc33f5353fc37a2919049eec2c7c6d&digest-algorithm=sha1",
+            "post_file": "./post_new.json"
+        }
+    }
+}
